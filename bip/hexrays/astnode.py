@@ -144,6 +144,8 @@ BIN_OPS = {
     HxCType.COT_FSUB,
     HxCType.COT_FMUL,
     HxCType.COT_FDIV,
+    HxCType.COT_MEMREF,
+    HxCType.COT_MEMPTR,
 }
 
 PRE_OPS = {
@@ -164,8 +166,6 @@ POST_OPS = {
     HxCType.COT_POSTDEC,
     HxCType.COT_CALL,
     HxCType.COT_IDX,
-    HxCType.COT_MEMREF,
-    HxCType.COT_MEMPTR,
 }
 
 UNARY_OPS = PRE_OPS | POST_OPS

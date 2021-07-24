@@ -8,13 +8,13 @@ import idc
 #: Used in :meth:`CType._validate_params`, do not modify this or rely
 #: on this in any way. Param names grouped together are mutually exlusive.
 _known_params = {
-    HxCType.COT_NUM: ( 'value', ),
-    HxCType.COT_FNUM: ( 'value', ),
-    HxCType.COT_STR: ( 'value', ),
-    HxCType.COT_OBJ: ( ('value', 'ea'), ),
-    HxCType.COT_VAR: (
-        ('is_arg', 'is_var'),
-        ('name', 'index'), ),
+    HxCType.COT_NUM: { ( 'value', ): 'Value to check against', },
+    HxCType.COT_FNUM: { ( 'value', ): 'Value to check against', },
+    HxCType.COT_STR: { ( 'value', ): 'Value to check against', },
+    HxCType.COT_OBJ: { ('value', 'ea', 'name' ): 'Value to check against', },
+    HxCType.COT_VAR: {
+        ('is_arg', 'is_var'): 'Only matches variable/arguments',
+        ('name', 'index'): 'Variable name/index to match against', },
 }
 
 _ANY_NODE_TYPE_ID = -1
@@ -51,24 +51,33 @@ for _expr in EXPRESSIONS | {_BIN_OP_NODE_TYPE_ID,
                             _LITERAL_NODE_TYPE_ID,
                             _EXPR_NODE_TYPE_ID,}:
     if _expr not in _known_params:
-        _known_params[_expr] = tuple()
-    _known_params[_expr] = _known_params[_expr] + ( 'type', )
+        _known_params[_expr] = dict()
+    _known_params[_expr].update({ ( 'type', ): 'Expression type to match against, either :class:`~bip.base.BipType` or :class:`~str`', })
 
 
 class CType:
+    """
+        Class for representing different constaint types for matching on AST
+        nodes.
+    """
+
     def __init__(self, node_type_name, node_type_id):
+        """
+            Create a new :class:`~bip.hexrays.CType`. This is not meant to be
+            called directly.
+        """
         self.node_type_name = node_type_name
         self.node_type_id = node_type_id
-
-    def __call__(self, *args, **kwargs):
-        return CTypeValue(self.node_type_name, self.node_type_id, *args, **kwargs)
-
-    def __eq__(self, other):
-        return self.__call__().__eq__(other)
 
 
 class CTypeValue:
     def __init__(self, node_type_name, node_type_id, *args, **kwargs):
+        """
+            Create a new :class:`~bip.hexrays.CTypeValue`. This is not meant to
+            be called directly but rather using :class:`~bip.hexrays.CType`
+            members being invoked. Refer to :class:`~bip.hexrays.CType` for
+            argument documentation.
+        """
         self.node_type_name = node_type_name
         self.node_type_id = node_type_id
 
@@ -76,7 +85,7 @@ class CTypeValue:
         if self._contains is not None:
             kwargs.pop('contains')
 
-            if isinstance(self._contains, CType):
+            if callable(self._contains):
                 self._contains = self._contains()
                 if self._contains.node_type_id == _CONTAINS_NODE_TYPE_ID:
                     raise ValueError('Empty contains')
@@ -123,7 +132,7 @@ class CTypeValue:
     def _transform_children(self):
         actual_children = list()
         for child in self._children:
-            if isinstance(child, CType):
+            if callable(child):
                 actual_children.append(child())
             else:
                 actual_children.append(child)
@@ -141,13 +150,7 @@ class CTypeValue:
         expected_params = _known_params[self.node_type_id]
         params_found = list()
         for param in self._params.keys():
-            if param in expected_params:
-                params_found.append(param)
-                continue
-
             for mutually_exclusive_params in expected_params:
-                if not isinstance(mutually_exclusive_params, tuple):
-                    pass
                 if param in mutually_exclusive_params:
                     for already_met in params_found:
                         if already_met in mutually_exclusive_params:
@@ -174,6 +177,8 @@ class CTypeValue:
             ea = other.value
             if 'ea' in self._params:
                 return self._params['ea'] == ea
+            elif 'name' in self._params:
+                return self._params['name'] == idaapi.get_name(ea)
 
             expected_value = self._params['value']
             flags = ida_bytes.get_full_flags(ea)
@@ -229,7 +234,13 @@ class CTypeValue:
         return False
 
     def __eq__(self, other):
-        if isinstance(other, (CType, CTypeValue)):
+        """
+            Compare to :class:`~bip.hexrays.CNode` and base classes to check
+            against constraints.
+
+            :return: True if the node matches the constraints, False otherwise.
+        """
+        if isinstance(other, CTypeValue):
             return self.node_type_id == other.node_type_id
         elif hasattr(other, 'TYPE_HANDLE') and not isinstance(other, type):
             if self.node_type_id == _ANY_NODE_TYPE_ID:
@@ -290,28 +301,65 @@ class CTypeValue:
         return not ret
 
 
+def _add_ctype(name, value, doc):
+    def _impl(*args, **kwargs):
+        return CTypeValue(name, value, *args, **kwargs)
+    _impl.__doc__ = doc
+
+    global _known_params
+    if _known_params.get(value) is not None:
+        _impl.__doc__ += '\n\nPossible keyword paramters:'
+        for params_tuple, params_doc in _known_params[value].items():
+            if len(params_tuple) == 1:
+                params_str = f'``{params_tuple[0]}``'
+            else:
+                params_str = ', '.join(map(lambda param: f'``{param}``', params_tuple[:-1]))
+                params_str = ' or '.join((params_str, f'``{params_tuple[-1]}``'))
+            params_str += f': {params_doc}'
+            _impl.__doc__ += f'\n\n\t\t{params_str}'
+
+    setattr(CType, name, _impl)
+
 for attr, value in HxCType.__dict__.items():
     if 'COT' not in attr and 'CIT' not in attr:
         continue
 
     _, name = attr.split('_')
     name = name.lower()
+
+    if name in ('last', 'helper'):
+        continue
+
+    cnode_class_name = 'CNode'
+    if value in EXPRESSIONS:
+        cnode_class_name += 'Expr' + name[0].upper() + name[1:]
+    elif value in STATEMENTS:
+        cnode_class_name += 'Stmt' + name[0].upper() + name[1:]
+
+    if name == 'do':
+        cnode_class_name = 'CNodeStmtDoWhile'
+    elif name == 'fnum':
+        cnode_class_name = 'CNodeExprFNum'
+    elif name == 'tern':
+        cnode_class_name = 'CNodeExprTernary'
+    doc = f'Matches instances of :class:`~bip.hexrays.cnode.{cnode_class_name}`'
+    
     if name in ('while', 'for'):
         name += '_loop'
     elif name in ('if', 'continue', 'break', 'return'):
         name += '_statement'
-    setattr(CType, name, CType(name, value))
+    _add_ctype(name, value, doc)
 
-setattr(CType, 'any', CType('any', _ANY_NODE_TYPE_ID))
-setattr(CType, 'either', CType('either', _EITHER_NODE_TYPE_ID))
-setattr(CType, 'contains', CType('contains', _CONTAINS_NODE_TYPE_ID))
+_add_ctype('any', _ANY_NODE_TYPE_ID, 'Matches everything')
+_add_ctype('either', _EITHER_NODE_TYPE_ID, 'Matches either of its children')
+_add_ctype('contains', _CONTAINS_NODE_TYPE_ID, 'Matches if somewhere in the AST the constaint exists')
 
-setattr(CType, 'binop', CType('contains', _BIN_OP_NODE_TYPE_ID))
-setattr(CType, 'preop', CType('contains', _PRE_OP_NODE_TYPE_ID))
-setattr(CType, 'postop', CType('contains', _POST_OP_NODE_TYPE_ID))
-setattr(CType, 'unaryop', CType('contains', _UNARY_OP_NODE_TYPE_ID))
-setattr(CType, 'op', CType('contains', _OP_NODE_TYPE_ID))
-setattr(CType, 'literal', CType('contains', _LITERAL_NODE_TYPE_ID))
-setattr(CType, 'expr', CType('contains', _EXPR_NODE_TYPE_ID))
-setattr(CType, 'loop', CType('contains', _LOOP_NODE_TYPE_ID))
-setattr(CType, 'stmt', CType('contains', _STMT_NODE_TYPE_ID))
+_add_ctype('binop', _BIN_OP_NODE_TYPE_ID, 'Matches all binary operators (+, =...)')
+_add_ctype('preop', _PRE_OP_NODE_TYPE_ID, 'Matches all prefixed unary operators (`*`, ++...)')
+_add_ctype('postop', _POST_OP_NODE_TYPE_ID, 'Matches all postfixed unary operators ([], ()...)')
+_add_ctype('unaryop', _UNARY_OP_NODE_TYPE_ID, 'Matches all unary operators (both prefixed and postfixed)')
+_add_ctype('op', _OP_NODE_TYPE_ID, 'Matches all operators (both binary and unary)')
+_add_ctype('literal', _LITERAL_NODE_TYPE_ID, 'Matches all literals (numbers, objects...)')
+_add_ctype('expr', _EXPR_NODE_TYPE_ID, 'Matches all expressions (not exression statement though!)')
+_add_ctype('loop', _LOOP_NODE_TYPE_ID, 'Matches all loops (for, while...)')
+_add_ctype('stmt', _STMT_NODE_TYPE_ID, 'Matches all statements')
