@@ -84,35 +84,24 @@ def visit_dfs_cnode_filterlist(cnode, callback, filter_list):
     if isinstance(filter_list, (list, tuple)) and len(filter_list) == 0:
         # we don't visit anything
         return
-    # check if we need to visit the child of the expression
-    vist_expr = False
-    if isinstance(filter_list, (list, tuple)):
-        for i in filter_list:
-            if issubclass(i, bip.hexrays.cnode.CNodeExpr):
-                vist_expr = True
-                break
-    elif issubclass(filter_list, bip.hexrays.cnode.CNodeExpr):
-        vist_expr = True
+
+    if not isinstance(filter_list, (list, tuple)):
+        filter_list = [filter_list]
+
     stack = [cnode]
     while len(stack) != 0:
         elt = stack.pop() # get the next element
         # check if we want the call
-        if ((isinstance(filter_list, list) and elt.__class__ in filter_list) or
-            (not isinstance(filter_list, list)
-                and isinstance(elt, filter_list))):
+        if elt.__class__ in filter_list or elt in filter_list:
             # check if we want the call
             if callback(elt) == False: # call the callback before visiting the next
                 return
         if isinstance(elt, bip.hexrays.cnode.CNodeExpr):
-            if vist_expr:
-                ch = list(elt.ops)
-                ch.reverse()
-                stack += ch
+            ch = list(elt.ops)
+            ch.reverse()
+            stack += ch
         elif isinstance(elt, bip.hexrays.cnode.CNodeStmt):
-            if vist_expr:
-                ch = list(elt.expr_children)
-            else:
-                ch = []
+            ch = list(elt.expr_children)
             ch += list(elt.stmt_children)
             ch.reverse()
             stack += ch
