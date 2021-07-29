@@ -8,13 +8,16 @@ import idc
 #: Used in :meth:`CType._validate_params`, do not modify this or rely
 #: on this in any way. Param names grouped together are mutually exlusive.
 _known_params = {
-    HxCType.COT_NUM: { ( 'value', ): 'Value to check against', },
-    HxCType.COT_FNUM: { ( 'value', ): 'Value to check against', },
-    HxCType.COT_STR: { ( 'value', ): 'Value to check against', },
-    HxCType.COT_OBJ: { ('value', 'ea', 'name' ): 'Value to check against', },
+    HxCType.COT_NUM: { ( 'value', ): 'Value to check against (can be iterable)', },
+    HxCType.COT_FNUM: { ( 'value', ): 'Value to check against (can be iterable)', },
+    HxCType.COT_STR: { ( 'value', ): 'Value to check against (can be iterable)', },
+    HxCType.COT_OBJ: { ( 'value', ): 'Value to check against (can be iterable)'
+                      ( 'ea', ) : 'Address to check against (can be iterable)',
+                      ( 'name', ): 'Name to check against (can be iterable)', },
     HxCType.COT_VAR: {
-        ('is_arg', 'is_var'): 'Only matches variable/arguments',
-        ('name', 'index'): 'Variable name/index to match against', },
+        ( 'is_arg', 'is_var' ): 'Only matches variable/arguments',
+        ( 'name', ): 'Variable name to match against (can be iterable)',
+        ( 'index', ): 'Variable index to match against (can be iterable)', },
 }
 
 _ANY_NODE_TYPE_ID = -1
@@ -58,7 +61,9 @@ for _expr in EXPRESSIONS | {_ASSIGNMENT_NODE_TYPE_ID,
                             _EXPR_NODE_TYPE_ID,}:
     if _expr not in _known_params:
         _known_params[_expr] = dict()
-    _known_params[_expr].update({ ( 'type', ): 'Expression type to match against, either :class:`~bip.base.BipType` or :class:`~str`', })
+    _known_params[_expr].update({ ( 'type', ): 
+                                    'Expression type to match against, either :class:`~bip.base.BipType` ' \
+                                    'or anything that its constructor accepts (can be iterable)', })
 
 
 class CType:
@@ -168,41 +173,50 @@ class CTypeValue:
             return True
 
         if 'type' in self._params:
-            bipType = self._params['type']
-            if isinstance(bipType, str):
-                bipType = BipType.from_c(bipType)
-            elif isinstance(bipType, idaapi.tinfo_t):
-                bipType = BipType.from_tinfo(bipType)
+            expected = self._params['type']
+            found = False
+            if not isinstance(expected, str):
+                try:
+                    found |= other.type in expected # assume iterable of types
+                except TypeError:
+                    found |= BipType.make(expected) != other.type:
+            else:
+                found |= BipType.make(expected) != other.type:
 
-            if bipType != other.type:
+            if not found:
                 return False
 
         if self.node_type_id in (HxCType.COT_NUM, HxCType.COT_FNUM, HxCType.COT_STR):
-            return self._params['value'] == other.value
+            expected = self._params['value']
+            try:
+                return other.value in expected # assume iterable of values
+            except TypeError:
+                return expected == other.value
         elif self.node_type_id == HxCType.COT_OBJ:
             ea = other.value
+            found = False
             if 'ea' in self._params:
-                return self._params['ea'] == ea
+                expected = self._params['ea']
+                try:
+                    found |= ea in expected # assume iterable of ea
+                except TypeError:
+                    found |= self._params['ea'] == ea
             elif 'name' in self._params:
-                return self._params['name'] == idaapi.get_name(ea)
+                expected = self._params['name']
+                if isinstance(expected, str):
+                    found |= expected == idaapi.get_name(ea)
+                else:
+                    found |= idaapi.get_name(ea) in expected # assume iterable of names
 
             expected_value = self._params['value']
-            flags = ida_bytes.get_full_flags(ea)
-            if ida_bytes.is_byte(flags):
-                return ida_bytes.get_wide_byte(ea) == expected_value
-            elif ida_bytes.is_word(flags):
-                return ida_bytes.get_wide_word(ea) == expected_value
-            elif ida_bytes.is_dword(flags):
-                return ida_bytes.get_wide_dword(ea) == expected_value
-            elif ida_bytes.is_qword(flags):
-                return ida_bytes.get_qword(ea) == expected_value
-            elif ida_bytes.is_strlit(flags):
-                return idc.get_strlit_contents(ea).decode() == expected_value
-            elif isinstance(expected_value, (bytes, bytearray)):
-                return idc.get_bytes(ea, len(expected_value)) == expected_value
-            
+            actual_value = GetElt(ea).value
+            try:
+                found |= actual_value in expected_value # assume iterable of values
+            except TypeError:
+                found |= expected_value == actual_value
+
+            return found 
             #: TODO: implement comparison for arrays and custom objects
-            return False
         elif self.node_type_id == HxCType.COT_VAR:
             if 'is_arg' in self._params:
                 if self._params['is_arg'] != other.lvar.is_arg:
@@ -211,12 +225,23 @@ class CTypeValue:
                 if self._params['is_var'] == other.lvar.is_arg:
                     return False
 
+            found_variable = False
             if 'name' in self._params:
-                if self._params['name'] != other.lvar_name:
-                    return False
-            elif 'index' in self._params:
-                if self._params['index'] != other.index:
-                    return False
+                expected = self._params['name']
+                try:
+                    found_variable |= other.lvar_name in expected # assume iterable of names
+                except TypeError:
+                    found_variable |= expected == other.lvar_name
+
+            if 'index' in self._params:
+                expected = self._params['index']
+                try:
+                    found_variable |= other.index in expected # assume iterable of indices
+                except TypeError:
+                    found_variable |= expected == other.index
+
+            if 'name' in self._params or 'index' in self._params and not found_variable:
+                return False
 
             return True
         else:
