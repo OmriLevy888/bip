@@ -92,18 +92,24 @@ class BipFunction(object):
 
     ################################# BASE #################################
 
-    def __init__(self, ea=None):
+    def __init__(self, data=None):
         """
             Constructor for a :class:`BipFunction` object.
 
             This function will raise a ``ValueError`` if the address ``ea``
             is not in the function.
 
-            :param ea: An address included in the function, it does not need
-                to be the first one. If ``None`` the screen address is used.
+            :param data: Either an address insdie the function, its name or if
+                nothing is passed, the screen address.
         """
-        if ea is None:
+        ea = data
+        if isinstance(data, str):
+            ea = idaapi.get_name_ea(idaapi.BADADDR, data)
+        elif hasattr(data, 'ea'):
+            ea = data.ea
+        elif data is None:
             ea = ida_kernwin.get_screen_ea()
+
         #: Internal func_t object from IDA
         self._funct = idaapi.get_func(ea)
         if self._funct is None:

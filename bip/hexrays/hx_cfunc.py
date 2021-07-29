@@ -1,5 +1,6 @@
 import ida_hexrays
 import ida_kernwin
+import idaapi
 
 from .hx_lvar import HxLvar
 from .hx_visitor import _hx_visitor_expr, _hx_visitor_list_expr, _hx_visitor_stmt, _hx_visitor_list_stmt, _hx_visitor_all, _hx_visitor_list_all
@@ -25,16 +26,28 @@ class HxCFunc(object):
             view at the same time. Basically you will want to regenerate this
             object for the function each time you make F5 again in the GUI,
             this can be done using the :meth:`HxCFunc.from_addr` class method.
+        
+        .. todo::
+            When events are up and running, make it so the :class:`HxCFunc`
+            object an all related objects automatically update when hitting F5.
     """
 
-    def __init__(self, cfunc):
+    def __init__(self, data=None):
         """
             Constructor for a :class:`HxCFunc` object.
 
-            :param cfunc: A ``cfunc_t`` pointer from IDA object such as return
-                by ``ida_hexrays.decompile`` .
+            :param data: Either an address inside the function, its name or if
+                nothing is passed, the screen address.
         """
-        self._cfunc = cfunc
+        ea = data
+        if isinstance(data, str):
+            ea = idaapi.get_name_ea(idaapi.BADADDR, data)
+        elif hasattr(data, 'ea'):
+            ea = data.ea
+        elif data is None:
+            ea = ida_kernwin.get_screen_ea()
+
+        self._cfunc = ida_hexrays.decompile(ea)
 
     @property
     def ea(self):
