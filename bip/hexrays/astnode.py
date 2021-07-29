@@ -99,8 +99,7 @@ class HxCType(object):
     CIT_END         = 83
 
 
-BIN_OPS = {
-    HxCType.COT_COMMA,
+ASSIGNMENTS = {
     HxCType.COT_ASG,
     HxCType.COT_ASGBOR,
     HxCType.COT_ASGXOR,
@@ -115,11 +114,9 @@ BIN_OPS = {
     HxCType.COT_ASGUDIV,
     HxCType.COT_ASGSMOD,
     HxCType.COT_ASGUMOD,
-    HxCType.COT_LOR,
-    HxCType.COT_LAND,
-    HxCType.COT_BOR,
-    HxCType.COT_XOR,
-    HxCType.COT_BAND,
+}
+
+COMPARISONS = {
     HxCType.COT_EQ,
     HxCType.COT_NE,
     HxCType.COT_SGE,
@@ -130,6 +127,15 @@ BIN_OPS = {
     HxCType.COT_UGT,
     HxCType.COT_SLT,
     HxCType.COT_ULT,
+}
+
+BIN_OPS = ASSIGNMENTS | COMPARISONS | {
+    HxCType.COT_COMMA,
+    HxCType.COT_LOR,
+    HxCType.COT_LAND,
+    HxCType.COT_BOR,
+    HxCType.COT_XOR,
+    HxCType.COT_BAND,
     HxCType.COT_SSHR,
     HxCType.COT_USHR,
     HxCType.COT_SHL,

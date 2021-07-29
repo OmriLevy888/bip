@@ -1,4 +1,4 @@
-from .astnode import HxCType, BIN_OPS, PRE_OPS, POST_OPS, UNARY_OPS, OPS, LITERALS, EXPRESSIONS, LOOPS, STATEMENTS
+from .astnode import HxCType, ASSIGNMENTS, COMPARISONS, BIN_OPS, PRE_OPS, POST_OPS, UNARY_OPS, OPS, LITERALS, EXPRESSIONS, LOOPS, STATEMENTS
 from bip.base.biptype import BipType
 import idaapi
 import ida_bytes
@@ -21,17 +21,21 @@ _ANY_NODE_TYPE_ID = -1
 _EITHER_NODE_TYPE_ID = -2
 _CONTAINS_NODE_TYPE_ID = -3
 
-_BIN_OP_NODE_TYPE_ID = -4
-_PRE_OP_NODE_TYPE_ID = -5
-_POST_OP_NODE_TYPE_ID = -6
-_UNARY_OP_NODE_TYPE_ID = -7
-_OP_NODE_TYPE_ID = -8
-_LITERAL_NODE_TYPE_ID = -9
-_EXPR_NODE_TYPE_ID = -10
-_LOOP_NODE_TYPE_ID = -11
-_STMT_NODE_TYPE_ID = -12
+_ASSIGNMENT_NODE_TYPE_ID = -4
+_COMPARISON_NODE_TYPE_ID = -5
+_BIN_OP_NODE_TYPE_ID = -6
+_PRE_OP_NODE_TYPE_ID = -7
+_POST_OP_NODE_TYPE_ID = -8
+_UNARY_OP_NODE_TYPE_ID = -9
+_OP_NODE_TYPE_ID = -10
+_LITERAL_NODE_TYPE_ID = -11
+_EXPR_NODE_TYPE_ID = -12
+_LOOP_NODE_TYPE_ID = -13
+_STMT_NODE_TYPE_ID = -14
 
 _NODE_CATEGORIES = {
+    _ASSIGNMENT_NODE_TYPE_ID: ASSIGNMENTS,
+    _COMPARISON_NODE_TYPE_ID: COMPARISONS,
     _BIN_OP_NODE_TYPE_ID: BIN_OPS,
     _PRE_OP_NODE_TYPE_ID: PRE_OPS,
     _POST_OP_NODE_TYPE_ID: POST_OPS,
@@ -43,7 +47,9 @@ _NODE_CATEGORIES = {
     _STMT_NODE_TYPE_ID: STATEMENTS,
 }
 
-for _expr in EXPRESSIONS | {_BIN_OP_NODE_TYPE_ID,
+for _expr in EXPRESSIONS | {_ASSIGNMENT_NODE_TYPE_ID,
+                            _COMPARISON_NODE_TYPE_ID,
+                            _BIN_OP_NODE_TYPE_ID,
                             _PRE_OP_NODE_TYPE_ID,
                             _POST_OP_NODE_TYPE_ID,
                             _UNARY_OP_NODE_TYPE_ID,
@@ -354,6 +360,8 @@ _add_ctype('any', _ANY_NODE_TYPE_ID, 'Matches everything')
 _add_ctype('either', _EITHER_NODE_TYPE_ID, 'Matches either of its children')
 _add_ctype('contains', _CONTAINS_NODE_TYPE_ID, 'Matches if somewhere in the AST the constaint exists')
 
+_add_ctype('assignment', _ASSIGNMENT_NODE_TYPE_ID, 'Matches all assignment operators (=, +=...)')
+_add_ctype('comparison', _COMPARISON_NODE_TYPE_ID, 'Matches all comparison operators (==, !=...)')
 _add_ctype('binop', _BIN_OP_NODE_TYPE_ID, 'Matches all binary operators (+, =...)')
 _add_ctype('preop', _PRE_OP_NODE_TYPE_ID, 'Matches all prefixed unary operators (`*`, ++...)')
 _add_ctype('postop', _POST_OP_NODE_TYPE_ID, 'Matches all postfixed unary operators ([], ()...)')

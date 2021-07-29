@@ -264,6 +264,8 @@ Special :class:`~bip.hexrays.CTypeValue` values
 :attr:`~CType.any`                        Matches anything
 :attr:`~CType.either`                     Matches either of its children
 :attr:`~CType.contains`                   Matches if somewhere in the AST the constraint exists
+:attr:`~CType.assignment`                 Matches all assignment operators (=, +=...)
+:attr:`~CType.comparison`                 Matches all comparison operators (==, !=...)
 :attr:`~CType.binop`                      Matches all binary operators (`+`, `=`...)
 :attr:`~CType.preop`                      Matches all prefixed unary operators (`*`, `++`...)
 :attr:`~CType.postop`                     Matches all postfixed unary operators (`[]', `()`...)
