@@ -51,11 +51,12 @@ class BipType(object):
         """
             Base constructor for the child classes of :class:`BipType`. This
             constructor is used for interfacing with IDA and initializing. A
-            bip user should probably used the :func:`BipType.from_tinfo`
-            function which will directly create the object of the correct
-            class.
+            bip user should probably used the :func:`BipType.from_tinfo`,
+            :func:`BipType.from_c` or :func:`BipType.make` functions which 
+            will directly create the object of the correct class.
 
             :param tinfo: The ``tinfo_t`` representing the type in IDA.
+
         """
         #: Internal object which correspond to the ``tinfo_t`` object
         #:  equivalent to this object in IDA.
@@ -117,6 +118,12 @@ class BipType(object):
         """
         if not isinstance(other, BipType):
             return NotImplemented
+
+        # also matches aliases
+        if self._tinfo.get_realtype() == other._tinfo.get_realtype():
+            return True
+
+        # should never get to here (I think)
         return self._tinfo == other._tinfo
 
     def __ne__(self, other):
@@ -305,6 +312,31 @@ class BipType(object):
         return BipType._get_class_bip_type(tinfo)(tinfo)
 
     @staticmethod
+    def _tinfo_from_c(cstr, flags=0x401):
+        """
+            Function which convert a C string declaration into a ``tinfo_t``
+            object. If there is no ``;`` at the end of the string provided,
+            one will be added automatically.
+
+            This is made for parsing **one** declaration and can create
+            problem if several declarations are in the string.
+
+            :param str cstr: A string representing a declaration in C.
+            :param int flags: ``PT_*`` flags from IDA (see typeinf.hpp).
+                The default is ``0x401`` (``PT_RAWARGS | PT_SIL``) should be
+                enough in most case.
+            :return: A ``tinfo_T`` object for the given declaration.
+            :raise RuntimeError: if the function was not able to create the type.
+        """
+        tif = tinfo_t()
+        cstr = cstr.strip()
+        if cstr[-1] != ';':
+            cstr += ';'
+        if parse_decl(tif, None, cstr, flags) is None:
+            raise RuntimeError("Unable to create a BipType from declaration {}".format(repr(cstr)))
+        return tif
+
+    @staticmethod
     def from_c(cstr, flags=0x401):
         """
             Function which convert a C string declaration into a object which
@@ -322,13 +354,28 @@ class BipType(object):
                 to the C declaration.
             :raise RuntimeError: if the function was not able to create the type.
         """
-        tif = tinfo_t()
-        cstr = cstr.strip()
-        if cstr[-1] != ';':
-            cstr += ';'
-        if parse_decl(tif, None, cstr, flags) is None:
-            raise RuntimeError("Unable to create a BipType from declaration {}".format(repr(cstr)))
-        return BipType.from_tinfo_no_copy(tif)
+        return BipType.from_tinfo_no_copy(BipType._tinfo_from_c(cstr, flags))
+
+    @staticmethod
+    def make(src):
+        """
+            Function to convert either ``tinfo_t`` or :class:`str` to one of
+            the child object of :class:`BipType` . This should most commonly
+            be used when creating a new instance of :class:`BipType` . Note
+            that unlike :func:`BipType.from_c`, this function does not
+            receive ``flags`` and therefore if there is a need to set the
+            ``flags`` argument passed to ``idaapi.parse_decl``, use
+            :func:`BipType.from_c` instead.
+
+            :param src: Either a ``tinfo_t`` or an :class:`str` to make the
+                type from.
+            :return: The requivalent object to the ``src`` passed. This
+                will be an object which inherit from :class:`BipType` .
+        """
+        if isinstance(src, str):
+            return BipType.from_c(src)
+        else:
+            return BipType.from_tinfo(src)
 
     @staticmethod
     def import_c_header(path, pack=0, raw_args=True, silent=False, autoimport=True):
