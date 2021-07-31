@@ -117,7 +117,11 @@ class CTypeValue:
         if self.node_type_id == _CONTAINS_NODE_TYPE_ID:
             if len(args) != 1:
                 raise ValueError('Contains expected one constraint')
-        elif self.node_type_id not in (_EITHER_NODE_TYPE_ID, _ANY_NODE_TYPE_ID):
+        elif self.node_type_id == _LOOP_NODE_TYPE_ID:
+            self._cond = kwargs.get('cond', None) 
+            self._body = kwargs.get('body', None)
+        elif self.node_type_id not in (_EITHER_NODE_TYPE_ID, _ANY_NODE_TYPE_ID) \
+            and self.node_type_id not in _NODE_CATEGORIES:
             #: TODO: add checks to make sure no child is ever overriden
             #: TODO: add checks to make sure there are no excess children
             for key, value in kwargs.items():
@@ -281,6 +285,14 @@ class CTypeValue:
 
         return False
 
+    def _check_loop(self, other):
+        valid = True
+        if self._cond is not None:
+            valid &= self._cond == other.cond 
+        if self._body is not None:
+            valid &= self._body == other.st_body
+        return valid
+
     def __eq__(self, other):
         """
             Compare to :class:`~bip.hexrays.CNode` and base classes to check
@@ -312,6 +324,10 @@ class CTypeValue:
                     return False
             elif self.node_type_id != other.TYPE_HANDLE:
                 return False
+
+            if self.node_type_id == _LOOP_NODE_TYPE_ID:
+                if not self._check_loop(other):
+                    return False
 
             if not self._check_params(other):
                 return False
