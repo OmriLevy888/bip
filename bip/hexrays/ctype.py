@@ -1,5 +1,6 @@
 from .astnode import HxCType, ASSIGNMENTS, COMPARISONS, BIN_OPS, PRE_OPS, POST_OPS, UNARY_OPS, OPS, LITERALS, EXPRESSIONS, LOOPS, STATEMENTS
 from bip.base.biptype import BipType
+from bip.base.bipelt import GetElt
 import idaapi
 import ida_bytes
 import idc
@@ -11,9 +12,10 @@ _known_params = {
     HxCType.COT_NUM: { ( 'value', ): 'Value to check against (can be iterable)', },
     HxCType.COT_FNUM: { ( 'value', ): 'Value to check against (can be iterable)', },
     HxCType.COT_STR: { ( 'value', ): 'Value to check against (can be iterable)', },
-    HxCType.COT_OBJ: { ( 'value', ): 'Value to check against (can be iterable)'
-                      ( 'ea', ) : 'Address to check against (can be iterable)',
-                      ( 'name', ): 'Name to check against (can be iterable)', },
+    HxCType.COT_OBJ: { 
+        ( 'value', ): 'Value to check against (can be iterable)',
+        ( 'ea', ) : 'Address to check against (can be iterable)',
+        ( 'name', ): 'Name to check against (can be iterable)', },
     HxCType.COT_VAR: {
         ( 'is_arg', 'is_var' ): 'Only matches variable/arguments',
         ( 'name', ): 'Variable name to match against (can be iterable)',
@@ -179,9 +181,9 @@ class CTypeValue:
                 try:
                     found |= other.type in expected # assume iterable of types
                 except TypeError:
-                    found |= BipType.make(expected) != other.type:
+                    found |= BipType.make(expected) != other.type
             else:
-                found |= BipType.make(expected) != other.type:
+                found |= BipType.make(expected) != other.type
 
             if not found:
                 return False
@@ -201,19 +203,34 @@ class CTypeValue:
                     found |= ea in expected # assume iterable of ea
                 except TypeError:
                     found |= self._params['ea'] == ea
-            elif 'name' in self._params:
+
+            if 'name' in self._params:
                 expected = self._params['name']
                 if isinstance(expected, str):
                     found |= expected == idaapi.get_name(ea)
                 else:
                     found |= idaapi.get_name(ea) in expected # assume iterable of names
 
-            expected_value = self._params['value']
-            actual_value = GetElt(ea).value
-            try:
-                found |= actual_value in expected_value # assume iterable of values
-            except TypeError:
-                found |= expected_value == actual_value
+            if 'value' in self._params:
+                expected_value = self._params['value']
+                elt = GetElt(ea)
+                if hasattr(elt, 'value'): # some objs do not have a value property
+                    actual_value = elt.value
+                    if isinstance(expected_value, str): # comparison is made with bytes
+                        expected_value = expected_value.encode()
+
+                    try:
+                        if isinstance(expected_value, bytes):
+                            found |= expected_value == actual_value
+                        else:
+                            found |= actual_value in expected_value # assume iterable of values
+                            if not found: # in case the value was not found, check if the value
+                                          # was passed as a string and if so, compare with it
+                                for item in expected_value:
+                                    if isinstance(item, str):
+                                        found |= item.encode() == actual_value
+                    except TypeError:
+                        found |= expected_value == actual_value
 
             return found 
             #: TODO: implement comparison for arrays and custom objects
@@ -240,7 +257,7 @@ class CTypeValue:
                 except TypeError:
                     found_variable |= expected == other.index
 
-            if 'name' in self._params or 'index' in self._params and not found_variable:
+            if ('name' in self._params or 'index' in self._params) and not found_variable:
                 return False
 
             return True
