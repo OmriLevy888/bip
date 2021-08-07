@@ -247,6 +247,72 @@ The IDA implementation can be access through the methods starting
 with ``hx_visit_`` methods of :class:`~bip.hexrays.HxCFunc`. See
 :ref:`doc-hexrays-ida-visitor-internal` for more information on those.
 
+Bip :class:`~bip.hexrays.CNode` visitors can work with
+:class:`~bip.hexrays.CTypeValue` filters. These allow for advanced pattern
+matching on :class:`~bip.hexrays.CNode` objects. :class:`~bip.hexrays.CTypeValue`
+are not meant to be created directly, but rather using the ones available under
+:class:`~bip.hexrays.CType`. Generally, there is a
+:class:`~bip.hexrays.CTypeValue` for each possible node type, though there are
+also a few special ones.
+
+Special :class:`~bip.hexrays.CTypeValue` values
+-----------------------------------------------
+
+========================================= ==============================================================================================================
+:class:`~CType` member                    Description                                                                                                   
+========================================= ==============================================================================================================
+:attr:`~CType.any`                        Matches anything
+:attr:`~CType.either`                     Matches either of its children
+:attr:`~CType.contains`                   Matches if somewhere in the AST the constraint exists
+:attr:`~CType.assignment`                 Matches all assignment operators (=, +=...)
+:attr:`~CType.comparison`                 Matches all comparison operators (==, !=...)
+:attr:`~CType.binop`                      Matches all binary operators (`+`, `=`...)
+:attr:`~CType.preop`                      Matches all prefixed unary operators (`*`, `++`...)
+:attr:`~CType.postop`                     Matches all postfixed unary operators (`[]', `()`...)
+:attr:`~CType.unaryop`                    Matches all unary operators (both prefixed and postfixed)
+:attr:`~CType.op`                         Matches all operators (both binary and unary)
+:attr:`~CType.literal`                    Matches all literals (numbers, objects...)
+:attr:`~CType.expr`                       Matches all expressions (not expression statement though!)
+:attr:`~CType.loop`                       Matches all loops (for, while...)
+:attr:`~CType.stmt`                       Matches all statements
+========================================= ==============================================================================================================
+
+When creating a :class:`~bip.hexrays.CTypeValue`, it is possible to use keyword
+arguments to refine the constraints. Node specific keyword constraints are
+documented under :class:`~bip.hexrays.CType`. Other than the ones documented,
+there is one universal keyword argument, the ``contains`` keyword argument. It
+acts as a global :attr:`~CType.contains`, rather than checking if a specific
+child of the node contains the constraint, it checks if any of the children
+contain the constraint.
+
+Other keyword arguments include ``op``, ``lhs``, ``dst``, ``init``, ``expr``,
+``cond``, ``rhs``, ``src``, ``then``, ``body``, ``else`` and ``step`` to pass
+children node constraints by name rather than by position.
+
+.. code-block:: python
+   
+    from bip import *
+
+    # filter that matches for loops where somewhere in their body there is an
+    # assignment to an argument
+    filter = CType.for_loop(body=CType.contains(CType.asg(CType.var(is_arg=True))))
+    # code to get some function
+    func.visit_cnode_filterlist(lambda match: print(match.cstr), filter)
+
+.. code-block:: c++
+
+  void foo(int arg) {
+    // the following loop matches the above filter
+    for (int i = 0; i < 5; i++) {
+      arg = arg + i;
+    }
+
+    // the following loop does not match the above filter
+    for (int i = 0; i < 5; i++) {
+      arg += i;
+    }
+  }
+
 AbstractCItem API
 =================
 
@@ -265,4 +331,21 @@ HxCtype Enum
     :member-order: bysource
 
 
+CType API
+=========
 
+.. autoclass:: CType
+   :members:
+   :member-order: bysource
+   :special-members:
+   :private-members:
+
+
+CTypeValue API
+==============
+
+.. autoclass:: CTypeValue
+   :members:
+   :member-order: bysource
+   :special-members:
+   :private-members:

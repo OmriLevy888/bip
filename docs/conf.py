@@ -168,4 +168,4 @@ texinfo_documents = [
 todo_include_todos = True
 
 def setup(app):
-    app.add_stylesheet('css/fixclassic.css')
+    app.add_css_file('css/fixclassic.css')

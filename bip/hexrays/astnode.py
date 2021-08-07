@@ -99,6 +99,113 @@ class HxCType(object):
     CIT_END         = 83
 
 
+ASSIGNMENTS = {
+    HxCType.COT_ASG,
+    HxCType.COT_ASGBOR,
+    HxCType.COT_ASGXOR,
+    HxCType.COT_ASGBAND,
+    HxCType.COT_ASGADD,
+    HxCType.COT_ASGSUB,
+    HxCType.COT_ASGMUL,
+    HxCType.COT_ASGSSHR,
+    HxCType.COT_ASGUSHR,
+    HxCType.COT_ASGSHL,
+    HxCType.COT_ASGSDIV,
+    HxCType.COT_ASGUDIV,
+    HxCType.COT_ASGSMOD,
+    HxCType.COT_ASGUMOD,
+}
+
+COMPARISONS = {
+    HxCType.COT_EQ,
+    HxCType.COT_NE,
+    HxCType.COT_SGE,
+    HxCType.COT_UGE,
+    HxCType.COT_SLE,
+    HxCType.COT_ULE,
+    HxCType.COT_SGT,
+    HxCType.COT_UGT,
+    HxCType.COT_SLT,
+    HxCType.COT_ULT,
+}
+
+BIN_OPS = ASSIGNMENTS | COMPARISONS | {
+    HxCType.COT_COMMA,
+    HxCType.COT_LOR,
+    HxCType.COT_LAND,
+    HxCType.COT_BOR,
+    HxCType.COT_XOR,
+    HxCType.COT_BAND,
+    HxCType.COT_SSHR,
+    HxCType.COT_USHR,
+    HxCType.COT_SHL,
+    HxCType.COT_ADD,
+    HxCType.COT_SUB,
+    HxCType.COT_MUL,
+    HxCType.COT_SDIV,
+    HxCType.COT_UDIV,
+    HxCType.COT_SMOD,
+    HxCType.COT_UMOD,
+    HxCType.COT_FADD,
+    HxCType.COT_FSUB,
+    HxCType.COT_FMUL,
+    HxCType.COT_FDIV,
+    HxCType.COT_MEMREF,
+    HxCType.COT_MEMPTR,
+}
+
+PRE_OPS = {
+    HxCType.COT_FNEG,
+    HxCType.COT_NEG,
+    HxCType.COT_CAST,
+    HxCType.COT_LNOT,
+    HxCType.COT_BNOT,
+    HxCType.COT_PTR,
+    HxCType.COT_REF,
+    HxCType.COT_PREINC,
+    HxCType.COT_PREDEC,
+    HxCType.COT_SIZEOF,
+}
+
+POST_OPS = {
+    HxCType.COT_POSTINC,
+    HxCType.COT_POSTDEC,
+    HxCType.COT_CALL,
+    HxCType.COT_IDX,
+}
+
+UNARY_OPS = PRE_OPS | POST_OPS
+
+OPS = BIN_OPS | UNARY_OPS | {HxCType.COT_TERN}
+
+LITERALS = {
+    HxCType.COT_NUM,
+    HxCType.COT_FNUM,
+    HxCType.COT_STR,
+    HxCType.COT_OBJ,
+}
+
+EXPRESSIONS = OPS | LITERALS | {HxCType.COT_VAR, HxCType.COT_HELPER | HxCType.COT_TYPE}
+
+LOOPS = {
+    HxCType.CIT_FOR,
+    HxCType.CIT_WHILE,
+    HxCType.CIT_DO,
+}
+
+STATEMENTS = LOOPS | {
+    HxCType.CIT_BLOCK,
+    HxCType.CIT_EXPR,
+    HxCType.CIT_IF,
+    HxCType.CIT_SWITCH,
+    HxCType.CIT_BREAK,
+    HxCType.CIT_CONTINUE,
+    HxCType.CIT_RETURN,
+    HxCType.CIT_GOTO,
+    HxCType.CIT_ASM,
+}
+
+
 class AbstractCItem(object):
     """
         Abstract class for common element between :class:`HxCItem` and

@@ -42,17 +42,19 @@ class BipData(BipElt):
     def value(self):
         """
             Property which return the value corresponding to the data of a
-            numberable elements. This property works only if the
-            :meth:`~BipData.is_numerable` and :meth:`~BipData.has_data`
-            properties returned True. For getting value of an element which
-            is not numerable use the :meth:`~BipElt.bytes` property.
+            numberable elements. This property works only if either
+            :meth:`~BipData.is_numerable` or :meth:`~BipData.is_strlit` and
+            :meth:`~BipData.has_data` properties returned True. For getting
+            value of an element which is not numerable use the
+            :meth:`~BipElt.bytes` property.
 
             This property is link to the type defined or guessed by IDA and
             it is a good idea to assure you have the proper type before using
             it.
 
-            :return: An integer representing the value of the data or ``None``
-                if the data element is not numerable or do not have data.
+            :return: An integer representing the value of the data if
+                :meth:`~BipData.is_numerable` is True, the string literal value
+                if :meth:`~BipData.is_strlit` is True or ``None``.
         """
         if not self.has_data:
             return None
@@ -64,6 +66,8 @@ class BipData(BipElt):
             return ida_bytes.get_wide_dword(self.ea)
         elif self.is_qword:
             return ida_bytes.get_qword(self.ea)
+        elif self.is_strlit:
+            return idc.get_strlit_contents(self.ea)
         else:
             return None
 
@@ -132,7 +136,8 @@ class BipData(BipElt):
             Property deleter which allow to set one byte as unitialized
             (marked as ``?`` in IDA) at the address of this data object.
         """
-        ida_bytes.del_value(self.ea)
+        if not self.is_strlit:
+            ida_bytes.del_value(self.ea)
 
     def __str__(self):
         if self.has_data:
@@ -274,6 +279,15 @@ class BipData(BipElt):
             or self.is_dword or self.is_qword)
 
     @property
+    def is_strlit(self):
+        """
+            Property which allow to test if this data is a string literal.
+
+            :return: True if the data is a string literal, False otherwise.
+        """
+        return ida_bytes.is_strlit(self.flags)
+
+    @property
     def type(self):
         """
             Property which allow to get the type of an element.
@@ -341,14 +355,14 @@ class BipData(BipElt):
                 ``None`` the screen address is used.
             :param original: If True the value recuperated will be the
                 original one (before a patch). Default: False.
-            :return: An integer corresponding to the value at the address.
+            :return: :class:`BipData` corresponding to the value at the address.
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
         if original:
-            return ida_bytes.get_original_byte(ea)
+            return BipData(ida_bytes.get_original_byte(ea))
         else:
-            return ida_bytes.get_wide_byte(ea)
+            return BipData(ida_bytes.get_wide_byte(ea))
 
     @staticmethod
     def set_byte(ea, value):
@@ -414,14 +428,14 @@ class BipData(BipElt):
                 ``None`` the screen address is used.
             :param original: If True the value recuperated will be the
                 original one (before a patch). Default: False.
-            :return: An integer corresponding to the value at the address.
+            :return: :class:`BipData` corresponding to the value at the address.
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
         if original:
-            return ida_bytes.get_original_word(ea)
+            return BipData(ida_bytes.get_original_word(ea))
         else:
-            return ida_bytes.get_wide_word(ea)
+            return BipData(ida_bytes.get_wide_word(ea))
 
     @staticmethod
     def set_word(ea, value):
@@ -444,14 +458,14 @@ class BipData(BipElt):
                 ``None`` the screen address is used.
             :param original: If True the value recuperated will be the
                 original one (before a patch). Default: False.
-            :return: An integer corresponding to the value at the address.
+            :return: :class:`BipData` corresponding to the value at the address.
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
         if original:
-            return ida_bytes.get_original_dword(ea)
+            return BipData(ida_bytes.get_original_dword(ea))
         else:
-            return ida_bytes.get_wide_dword(ea)
+            return BipData(ida_bytes.get_wide_dword(ea))
 
     @staticmethod
     def set_dword(ea, value):
@@ -474,14 +488,14 @@ class BipData(BipElt):
                 ``None`` the screen address is used.
             :param original: If True the value recuperated will be the
                 original one (before a patch). Default: False.
-            :return: An integer corresponding to the value at the address.
+            :return: :class:`BipData` corresponding to the value at the address.
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
         if original:
-            return ida_bytes.get_original_qword(ea)
+            return BipData(ida_bytes.get_original_qword(ea))
         else:
-            return ida_bytes.get_qword(ea)
+            return BipData(ida_bytes.get_qword(ea))
 
     @staticmethod
     def set_qword(ea, value):
@@ -496,19 +510,17 @@ class BipData(BipElt):
             raise RuntimeError("Unable to set value {} at {}".format(ea, value))
 
     @staticmethod
-    def get_cstring(ea=None, size=-1):
+    def get_cstring(ea=None):
         """
             Static method for getting a C string from an address.
 
             :param ea: The address of the string. If
                 ``None`` the screen address is used.
-            :param size: The size of the string. If ``-1`` (default), until a
-                ``\0`` is found.
-            :return: Bytes representing the string
+            :return: :class:`BipData` object representing the string.
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
-        return idc.get_strlit_contents(ea, length=size)
+        return BipData(ea)
 
     @staticmethod
     def get_ptr(ea=None):
@@ -518,16 +530,16 @@ class BipData(BipElt):
     
             :param int ea: the address at which get the pointer value. If
                 ``None`` the screen address is used.
-            :return: the pointer value
+            :return: :class:`BipData` corresponding to the pointer. 
         """
         if ea is None:
             ea = ida_kernwin.get_screen_ea()
 
         info = ida_idaapi.get_inf_structure()
         if info.is_64bit():
-            return ida_bytes.get_qword(ea)
+            return BipData(ida_bytes.get_qword(ea))
         elif info.is_32bit():
-            return ida_bytes.get_wide_dword(ea)
+            return BipData(ida_bytes.get_wide_dword(ea))
         else:
-            return ida_bytes.get_wide_word(ea)
+            return BipData(ida_bytes.get_wide_word(ea))
 

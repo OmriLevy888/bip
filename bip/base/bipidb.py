@@ -4,6 +4,10 @@
 import ida_kernwin
 import idaapi
 import idc
+import idautils
+import functools
+import collections
+
 
 class BipIdb(object):
     """
@@ -92,6 +96,64 @@ class BipIdb(object):
             :rtype: int
         """
         return offset+idaapi.get_imagebase()
+
+    @staticmethod
+    def strings():
+        """
+            Get all the strings in the binary identified by IDA.
+
+            :return: All strings in IDB.
+            :rtype: Iterable :class:`BipData`
+        """
+        from .bipelt import GetElt
+        for s in idautils.Strings():
+            yield GetElt(s.ea)
+
+    @staticmethod
+    def imports():
+        """
+            Get all imported symbols.
+
+            :return: Iterable of named tuples with fields for ``module_name``,
+                ``name``, ``ea`` and ``ordinal``
+        """
+        imported_symbol = collections.namedtuple('imported_symbol',
+                                                 ('module_name',
+                                                  'name',
+                                                  'ea',
+                                                  'ordinal'))
+
+        def callback(container, ea, name, ordinal):
+            container.append((ea, name, ordinal))
+            return True
+
+        nimps = idaapi.get_import_module_qty()
+        for module_idx in range(nimps):
+            module_name = idaapi.get_import_module_name(module_idx)
+            container = list()
+            bound_callback = functools.partial(callback, container)
+            idaapi.enum_import_names(module_idx, bound_callback)
+            for ea, name, ordinal in container:
+                yield imported_symbol(module_name, name, ea, ordinal)
+
+
+    @staticmethod
+    def exports():
+        """
+            Get all exported symbols (entry ordinal is the same as ea).
+
+            :return: Iterable of either tuples where the first item is
+                the ordinal and the second is either :class:`BipData` or
+                :class:`BipFunction`.
+        """
+        from .bipelt import GetElt
+        for export in idautils.Entries():
+            idx, ordinal, ea, name = export
+            elt = GetElt(ea)
+            if elt.is_code:
+                elt = elt.func
+            yield ordinal, elt
+        
 
 def min_ea():
     """
