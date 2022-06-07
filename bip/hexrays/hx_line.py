@@ -2,7 +2,7 @@ import ida_hexrays
 
 
 class HxLine:
-    def __init__(self, ea):
+    def __init__(self, ea, cfunc=None):
         if not isinstance(ea, int):
             if hasattr(ea, 'ea') and isinstance(ea.ea, int):
                 ea = ea.ea
@@ -10,7 +10,7 @@ class HxLine:
                 raise ValueError(f"Must passed integer value for ea or something with ea field which is an integer")
 
         self.ea = ea
-        self._cfunc = None
+        self._cfunc = cfunc
         self._cstr = None
 
     @property
@@ -37,12 +37,18 @@ class HxLine:
         if self.ea not in cfunc.eamap:
             raise ValueError(f"{hex(self.ea)} not in self.cfunc.eamaps")
 
-        insnvec = cfunc.eamap[self.ea]
-        lines = list()
-        for stmt in insnvec:
-            qp = ida_hexrays.qstring_printer_t(cfunc, False)
-            stmt._print(0, qp)
-            s = qp.s.split('\n')[0]
-            lines.append(s)
-        self._cstr = '\n'.join(lines)
+        try:
+            insnvec = cfunc.eamap[self.ea]
+            lines = list()
+            for stmt in insnvec:
+                qp = ida_hexrays.qstring_printer_t(cfunc.__deref__(), False)
+                stmt._print(0, qp)
+                s = qp.s.split('\n')[0]
+                lines.append(s)
+            self._cstr = '\n'.join(lines)
+        except ValueError as _:
+            # Occurs when printing the last line in a function
+            # (invalid INS_EPILOG in method 'cinsn_t__print', argument 1 of type 'cinsn_t const *')
+            self._cstr = '}'
+
         return self._cstr

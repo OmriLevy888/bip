@@ -4,6 +4,8 @@ import idaapi
 import idc
 import ida_name
 
+from bip.hexrays.hx_line import HxLine
+
 from .hx_lvar import HxLvar
 from .hx_visitor import _hx_visitor_expr, _hx_visitor_list_expr, _hx_visitor_stmt, _hx_visitor_list_stmt, _hx_visitor_all, _hx_visitor_list_all
 from .cnode import CNode
@@ -109,6 +111,13 @@ class HxCFunc(object):
             :return: The :class:`BipFunction` associated with this object.
         """
         return bbase.BipFunction(self.ea)
+
+    @property
+    def eamap(self):
+        """
+            TODO: write this
+        """
+        return dict(self._cfunc.eamap)
 
     ############################### OTHER ################################
 
@@ -239,6 +248,21 @@ class HxCFunc(object):
             :return: A list of :class:`HxLvar`.
         """
         return [HxLvar(l, self) for l in self._cfunc.get_lvars() if l.is_arg_var]
+
+    ################################# LINES ##################################
+
+    @property
+    def lines(self):
+        """
+            TODO: write this (order is determined by EA!!!)
+        """
+        unique_vecs, lines_ea = list(), list()
+        for ea, vec in self.eamap.items():
+            if vec not in unique_vecs:
+                unique_vecs.append(vec)
+                lines_ea.append(ea)
+
+        return [HxLine(ea, self._cfunc) for ea in lines_ea]
 
     ############################ CNODE & VISITORS ############################
 
