@@ -8,6 +8,7 @@ from .astnode import AbstractCItem, HxCType
 from .hx_citem import HxCItem, HxCExpr, HxCStmt
 from bip.base.biptype import BipType
 from bip.base import BipFunction
+from bip.base.bipelt import GetElt
 from . import cnode_visitor
 
 import ida_pro
@@ -789,3 +790,12 @@ def get_arg_intval(self, argnum):
     return o.value
 
 
+@addCNodeMethod("CNodeExprObj")
+def xrefs_to(self):
+    """
+        Method for getting xrefs to the object.
+
+        :return: A list of :class:`bip.hexrays.HxLine` for each xref to this
+            object.
+    """
+    return GetElt(self.value).xHxTo

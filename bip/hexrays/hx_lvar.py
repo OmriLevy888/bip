@@ -84,7 +84,7 @@ class HxLvar(object):
     def name(self, value):
         """
             Setter for the name of this local variable.
-            
+
             If this local variable is not set as persistent (True by default)
             this will not be saved in the idb. See :meth:`~HxLvar.save` for
             more information.
@@ -133,7 +133,7 @@ class HxLvar(object):
     def comment(self, value):
         """
             Setter for the comment of this local variable.
-            
+
             If this local variable is not set as persistent (True by default)
             this will not be saved in the idb. See :meth:`~HxLvar.save` for
             more information.
@@ -161,7 +161,7 @@ class HxLvar(object):
             Property which return the object, which inherit from
             :class:`BipType`, corresponding to the type of this local
             variable.
-            
+
             Because of the handling of the type in IDA the object
             returned is a copy of the type of this local variable. For
             changing the type of this variable it is necessary to use the
@@ -180,7 +180,7 @@ class HxLvar(object):
             :class:`BipType` and set the type of this local variable to this
             new type. If a string is passed as the setter it will try to
             be converted as a :class:`~bip.base.BipType`.
-            
+
             .. note::
 
                 This will create a copy of the type provided in argument

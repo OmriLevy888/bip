@@ -8,7 +8,6 @@ try:
 except Exception:
     pass
 
-from .event import HxEvent
 from .hx_lvar import HxLvar
 from .hx_cfunc import HxCFunc
 from .astnode import HxCType
@@ -17,3 +16,4 @@ from .hx_cexpr import HxCExprFinal, HxCExprEmpty, HxCExprNum, HxCExprFNum, HxCEx
 from .hx_cstmt import HxCStmtEmpty, HxCStmtFinal, HxCStmtExpr, HxCStmtGoto, HxCStmtAsm, HxCStmtIf, HxCStmtLoop, HxCStmtFor, HxCStmtWhile, HxCStmtDoWhile, HxCStmtReturn, HxCStmtSwitch, HxCStmtContinue, HxCStmtBreak, HxCStmtBlock
 from .cnode import *
 from .ctype import CType, CTypeValue
+from .hx_line import HxLine

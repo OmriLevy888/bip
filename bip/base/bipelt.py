@@ -210,6 +210,23 @@ class BipRefElt(BipBaseElt):
         """
         return [x.src for x in self.xTo if ('is_code' in dir(x.src) and x.src.is_code)]
 
+    @property
+    def xHxTo(self):
+        """
+            Property which return all hexrays lines which referenced this
+            element.
+
+            :return: A list of :class:`bip.hexrays.HxLine` referencing this
+                element.
+        """
+        from bip.hexrays import HxLine
+        hexrays_xrefs = list()
+        for x in self.xTo:
+            line = HxLine(x.src_ea)
+            if line.cfunc is not None:
+                hexrays_xrefs.append(line)
+        return hexrays_xrefs
+
 
 class BipElt(BipRefElt):
     """

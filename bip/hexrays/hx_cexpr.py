@@ -1206,12 +1206,3 @@ class HxCExprMemptr(HxCExprMemAccess):
     @property
     def ops(self):
         return [self.ptr]
-
-
-
-
-
-
-
-
-

@@ -1,6 +1,8 @@
 import ida_hexrays
 import ida_kernwin
 import idaapi
+import idc
+import ida_name
 
 from .hx_lvar import HxLvar
 from .hx_visitor import _hx_visitor_expr, _hx_visitor_list_expr, _hx_visitor_stmt, _hx_visitor_list_stmt, _hx_visitor_all, _hx_visitor_list_all
@@ -16,17 +18,17 @@ class HxCFunc(object):
         ``cfunc_t`` object.
 
         .. warning::
-        
+
             Decompiling again the function in hexrays (meaning
             hitting F5 again) will create a new ``cfunc_t`` object. An
             :class:`HxCFunc` python object (or the corresponding ``cfunc_t``
-            object from IDA) and the others associated objects (such as the 
+            object from IDA) and the others associated objects (such as the
             :class:`HxLvar` for example) will not be the same anymore. This
             can create problems when using the scripting and the interactive
             view at the same time. Basically you will want to regenerate this
             object for the function each time you make F5 again in the GUI,
             this can be done using the :meth:`HxCFunc.from_addr` class method.
-        
+
         .. todo::
             When events are up and running, make it so the :class:`HxCFunc`
             object an all related objects automatically update when hitting F5.
@@ -39,15 +41,22 @@ class HxCFunc(object):
             :param data: Either an address inside the function, its name or if
                 nothing is passed, the screen address.
         """
-        ea = data
-        if isinstance(data, str):
-            ea = idaapi.get_name_ea(idaapi.BADADDR, data)
-        elif hasattr(data, 'ea'):
-            ea = data.ea
-        elif data is None:
-            ea = ida_kernwin.get_screen_ea()
+        if isinstance(data, ida_hexrays.cfuncptr_t):
+            self._cfunc = data
+        else:
+            ea = data
+            if isinstance(data, str):
+                ea = idaapi.get_name_ea(idaapi.BADADDR, data)
+                if ea == idaapi.BADADDR:
+                    raise RuntimeError(f'No function with name {data}')
+            elif hasattr(data, 'ea'):
+                ea = data.ea
+                if ea == idaapi.BADADDR:
+                    raise RuntimeError('Got bad address')
+            elif data is None:
+                ea = ida_kernwin.get_screen_ea()
 
-        self._cfunc = ida_hexrays.decompile(ea)
+            self._cfunc = ida_hexrays.decompile(ea)
 
     @property
     def ea(self):
@@ -58,6 +67,27 @@ class HxCFunc(object):
         """
         return self._cfunc.entry_ea
 
+    @property
+    def name(self):
+        """
+            Proeprty which return the name of this function.
+
+            :return: :class:`str` representing the name of the function.
+        """
+        return idc.get_name(self.ea, ida_name.GN_VISIBLE)
+
+    @name.setter
+    def name(self, value):
+        """
+            Setter for changing name of the function.
+
+            :param str value: The new name of the function, if an empty string
+                or ``None`` is provided will revert to the default name
+                provided by IDA (``sub_...``).
+        """
+        if value is None:
+            value = ""
+        idc.set_name(self.ea, value, idc.SN_CHECK)
 
     @property
     def cstr(self):
@@ -99,6 +129,7 @@ class HxCFunc(object):
                 disassembled function will be closed. False by default.
         """
         ida_hexrays.mark_cfunc_dirty(self.ea, close_window)
+        self._cfunc = ida_hexrays.decompile(self.ea)
 
     ################################ CMT ###########################
 
@@ -125,7 +156,7 @@ class HxCFunc(object):
         tl.itp = itp
         self._cfunc.set_user_cmt(tl, value)
         self._cfunc.save_user_cmts()
-        
+
     def get_cmt(self, ea, itp=None):
         """
             Allow to get a comment in the hexrays interface view.
@@ -157,7 +188,7 @@ class HxCFunc(object):
 
             This equivalent to using :meth:`~HxCFunc.lvars` with access in an
             index but should be faster.
-            
+
             :return: A :class:`HxLvar` object.
         """
         return HxLvar(self._cfunc.lvars[idx], self)
@@ -187,7 +218,7 @@ class HxCFunc(object):
     def lvar_by_name(self, name):
         """
             Return a lvar with a particular name in this function.
-            
+
             :param str name: The name of the lvar to search for.
             :return: A :class:`HxLvar` object or None if the lvar was
                 not found.
@@ -515,7 +546,7 @@ class HxCFunc(object):
             This may raise a :class:`~bip.base.BipDecompileError` if the
             decompilation failed or if the address provided is not in a
             function.
-            
+
             :param int ea: An address inside the function for which we want
                 an :class:`HxCFunc`. If ``None`` the screen address will be
                 used.

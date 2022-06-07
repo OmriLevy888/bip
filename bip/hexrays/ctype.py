@@ -2,8 +2,6 @@ from .astnode import HxCType, ASSIGNMENTS, COMPARISONS, BIN_OPS, PRE_OPS, POST_O
 from bip.base.biptype import BipType
 from bip.base.bipelt import GetElt
 import idaapi
-import ida_bytes
-import idc
 
 
 #: Used in :meth:`CType._validate_params`, do not modify this or rely
@@ -12,7 +10,7 @@ _known_params = {
     HxCType.COT_NUM: { ( 'value', ): 'Value to check against (can be iterable)', },
     HxCType.COT_FNUM: { ( 'value', ): 'Value to check against (can be iterable)', },
     HxCType.COT_STR: { ( 'value', ): 'Value to check against (can be iterable)', },
-    HxCType.COT_OBJ: { 
+    HxCType.COT_OBJ: {
         ( 'value', ): 'Value to check against (can be iterable)',
         ( 'ea', ) : 'Address to check against (can be iterable)',
         ( 'name', ): 'Name to check against (can be iterable)', },
@@ -63,7 +61,7 @@ for _expr in EXPRESSIONS | {_ASSIGNMENT_NODE_TYPE_ID,
                             _EXPR_NODE_TYPE_ID,}:
     if _expr not in _known_params:
         _known_params[_expr] = dict()
-    _known_params[_expr].update({ ( 'type', ): 
+    _known_params[_expr].update({ ( 'type', ):
                                     'Expression type to match against, either :class:`~bip.base.BipType` ' \
                                     'or anything that its constructor accepts (can be iterable)', })
 
@@ -137,7 +135,7 @@ class CTypeValue:
                     self._insert_child(3, value)
                 else:
                     self._params[key] = value
-          
+
             self._transform_children()
             self._validate_params()
 
@@ -236,7 +234,7 @@ class CTypeValue:
                     except TypeError:
                         found |= expected_value == actual_value
 
-            return found 
+            return found
             #: TODO: implement comparison for arrays and custom objects
         elif self.node_type_id == HxCType.COT_VAR:
             if 'is_arg' in self._params:
@@ -288,7 +286,7 @@ class CTypeValue:
     def _check_loop(self, other):
         valid = True
         if self._cond is not None:
-            valid &= self._cond == other.cond 
+            valid &= self._cond == other.cond
         if self._body is not None:
             valid &= self._body == other.st_body
         return valid
@@ -407,7 +405,7 @@ for attr, value in HxCType.__dict__.items():
     elif name == 'tern':
         cnode_class_name = 'CNodeExprTernary'
     doc = f'Matches instances of :class:`~bip.hexrays.cnode.{cnode_class_name}`'
-    
+
     if name in ('while', 'for'):
         name += '_loop'
     elif name in ('if', 'continue', 'break', 'return'):
