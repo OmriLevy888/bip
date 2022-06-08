@@ -40,6 +40,7 @@
 #    CVAR_THISARG 0x00008000 #: 'this' argument of c++ member functions   
 #    CVAR_FORCED  0x00010000 #: variable was created by an explicit request otherwise we could reuse an existing var  
 
+from bip.hexrays.hx_line import HxLine
 from bip.py3compat.py3compat import *
 from bip.base import biptype
 
@@ -291,6 +292,26 @@ class HxLvar(object):
     #        self._lvar.clr_arg_var()
 
     @property
+    def has_user_name(self):
+        """
+            Property which return True if this variable has a user name.
+
+            :return: bool
+        """
+        return self._lvar.has_user_name
+
+    @property
+    def has_user_type(self):
+        """
+            Property which return True if this variable has a user type.
+
+            :return: bool
+        """
+        return self._lvar.has_user_type
+
+    ############################### LOCATION ###############################
+
+    @property
     def is_reg(self):
         """
             Property for checking if this local variable is located in a
@@ -311,22 +332,31 @@ class HxLvar(object):
         return self._lvar.is_stk_var()
 
     @property
-    def has_user_name(self):
+    def stkoff(self):
         """
-            Property which return True if this variable has a user name.
+            Property which return the offset of the variable on the stack.
 
-            :return: bool
+            :return int: The offset of the variable on the stack.
         """
-        return self._lvar.has_user_name
+        return self._lvar.get_stkoff()
 
     @property
-    def has_user_type(self):
+    def defea(self):
         """
-            Property which return True if this variable has a user type.
+            Property which return the ea where the variable is defined.
 
-            :return: bool
+            :return int: The ea where the varaible is defined.
         """
-        return self._lvar.has_user_type
+        return self._lvar.defea
+
+    @property
+    def defline(self):
+        """
+            Property which return the line where the variable is defined.
+
+            :return :class:`HxLine`: The line where the varaible is defined.
+        """
+        return HxLine(self.defea - 1, self._hxcfunc._cfunc)
 
     ############################### CMP METHODS ############################
 

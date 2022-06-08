@@ -34,6 +34,10 @@ for flag in HxUIFlags:
 
 
 class HxUI:
+    """
+        Object representing a decompilation window.
+    """
+
     def __init__(self, ea, flags=HxUIFlags.NO_WAIT):
         """
             Create a new HxUI object.

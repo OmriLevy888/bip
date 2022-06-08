@@ -2,7 +2,14 @@ import ida_hexrays
 
 
 class HxLine:
+    """
+        TODO: write this
+    """
+
     def __init__(self, ea, cfunc=None):
+        """
+            TODO: write this
+        """
         if not isinstance(ea, int):
             if hasattr(ea, 'ea') and isinstance(ea.ea, int):
                 ea = ea.ea
@@ -22,6 +29,15 @@ class HxLine:
             return self._cfunc
         self._cfunc = ida_hexrays.decompile(self.ea)
         return self._cfunc
+
+    @property
+    def lineno(self):
+        """
+            TODO: wrhite this
+        """
+        from bip.hexrays.hx_cfunc import HxCFunc
+        lines = [line.strip() for line in HxCFunc(self.cfunc).cstr.split('\n')]
+        return lines.index(self.cstr.strip()) + 1
 
     @property
     def cstr(self):
