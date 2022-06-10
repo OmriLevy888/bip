@@ -4,3 +4,4 @@ from .menutb import *
 from .userselect import BipUserSelect
 from .pluginmanager import get_plugin_manager, BipPluginLoader
 from .plugin import BipPlugin, shortcut, menu
+from .keyboard import KeyPress

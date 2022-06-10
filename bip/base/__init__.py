@@ -11,4 +11,4 @@ from .biperror import BipError, BipDecompileError
 from .func import _BipFuncFlags, BipFunction
 from .block import BipBlockType, BipBlock
 from .biptype import BipType, BTypeEmpty, BTypePartial, BTypeVoid, BTypeInt, BTypeBool, BTypeFloat, BTypePtr, BTypeArray, BTypeFunc, BTypeStruct, BTypeUnion, BTypeEnum
-from .event import HexRaysEvents, register_hook, unregister_hook, unregister_all_hooks, get_hook_mask, is_hook_register_for, set_hook_mask
+from .event import HexRaysEvents, register_hook, register_hook_mask, register_hook_all, unregister_hook, unregister_all_hooks, get_hook_mask, set_hook_mask

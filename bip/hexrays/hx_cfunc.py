@@ -60,6 +60,8 @@ class HxCFunc(object):
 
             self._cfunc = ida_hexrays.decompile(ea)
 
+        self._lines = None
+
     @property
     def ea(self):
         """
@@ -256,13 +258,17 @@ class HxCFunc(object):
         """
             TODO: write this (order is determined by EA!!!)
         """
+        if self._lines is not None:
+            return self._lines
+
         unique_vecs, lines_ea = list(), list()
         for ea, vec in self.eamap.items():
             if vec not in unique_vecs:
                 unique_vecs.append(vec)
                 lines_ea.append(ea)
 
-        return [HxLine(ea, self._cfunc) for ea in lines_ea]
+        self._lines = [HxLine(ea, self._cfunc) for ea in lines_ea]
+        return self._lines
 
     ############################ CNODE & VISITORS ############################
 

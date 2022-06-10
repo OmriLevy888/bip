@@ -38,15 +38,23 @@ class HxUI:
         Object representing a decompilation window.
     """
 
-    def __init__(self, ea, flags=HxUIFlags.NO_WAIT):
+    def __init__(self, ea=None, vdui=None, flags=HxUIFlags.NO_WAIT):
         """
             Create a new HxUI object.
 
             :param int ea: The address to open the HxUI object at.
+            :param vdui_t vdui: The IDA ui object.
             :param :class:`HxUIFlags` flags: How to open the pseudocode window.
                 Default is HxUIFlags.NO_WAIT.
         """
-        self._vdui = ida_hexrays.open_pseudocode(ea, flags)
+        if ea is None and vdui is None:
+            raise ValueError(f'Both ea and vdui are None')
+        elif ea is not None and vdui is not None:
+            raise ValueError(f'Can only pass either ea or vdui')
+        elif ea is not None:
+            self._vdui = ida_hexrays.open_pseudocode(ea, flags)
+        else:
+            self._vdui = vdui
 
     @property
     def vdui(self):
@@ -149,3 +157,16 @@ class HxUI:
             Clear the pseudocode window.
         """
         self.vdui.clear()
+
+    ################################# CTREE ##################################
+
+    @property
+    def item_under_mouse(self):
+        """
+            TODO: write this
+            TODO: make this return HxCnode object
+        """
+        if not self.vdui.get_current_item(ida_hexrays.USE_MOUSE):
+            return None
+
+        return self.vdui.item
