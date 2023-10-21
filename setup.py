@@ -6,6 +6,7 @@ import os
 import shutil
 from distutils.dir_util import copy_tree
 import typing
+import re
 
 
 class InstallBipPluginManager(install):
@@ -37,38 +38,49 @@ class InstallBipPluginManager(install):
         shutil.copyfile(bip_plugin_loader, plugins_folder / 'idabip_loader.py')
         print(f'[+] Copied {bip_plugin_loader} -> {plugins_folder}')
     
-    def _get_bip_rcfile_version(self, rcfile_content: str) -> typing.Optional[str]:
-        for line in rcfile_content.split('\n'):
-            if '_BIP_IDAPYTHON_RC_VERSION' not in line:
-                continue
+    def _wrap_rcfile_content(self, rcfile_content: str) -> str:
+        head = '# --- bip start ---'
+        tail = '# --- bip end ---'
+        return f'{head}\n{rcfile_content}\n{tail}'
+    
+    def _update_rcfile(self, source: Path, destination: Path):
+        with open(source, 'r') as source_rcfile:
+            source_data = source_rcfile.read()
+
+        if not destination.exists():
+            with open(destination, 'w') as destination_rcfile:
+                destination_rcfile.write(self._wrap_rcfile_content(source_data))
+                destination_rcfile.write('\n')
             
-            return line.split('=')[1].strip()[1:-1]
+            print(f'[+] Created {destination}')
+            return
         
-        return None
+        with open(destination, 'r') as destination_rcfile:
+            destination_data = destination_rcfile.read()
+
+        head = '# --- bip start ---'
+        tail = '# --- bip end ---'
+        updated = re.sub(f'{head}(.*){tail}',
+                         f'{head}\n{source_data}\n{tail}',
+                         destination_data,
+                         flags=re.DOTALL)
+        
+        with open(destination, 'w') as destination_rcfile:
+            destination_rcfile.write(updated)
+            
+        print(f'[+] Updated {destination}')
 
     def _setup_idapythonrc(self):
         print('[+] Setting up idapythonrc.py')
         idapythonrc_path = self._get_ida_folder() / 'idapythonrc.py'
+        ipyidarc_path = self._get_ida_folder() / 'ipyidarc.py'
 
-        if not idapythonrc_path.exists():
-            idapythonrc_path.touch()
-       
-        bip_idapythonrc_path = Path(os.path.realpath(__file__)).parent / 'install' / 'idapythonrc.py'
-        with open(bip_idapythonrc_path, 'r') as bip_rcfile:
-            bip_idapythonrc_content = bip_rcfile.read()
-        
-        install_rcfile_version = self._get_bip_rcfile_version(bip_idapythonrc_content)
+        install_folder = Path(os.path.realpath(__file__)).parent / 'install'
+        install_idapythonrc_path = install_folder / 'idapythonrc.py'
+        install_ipyidarc_path = install_folder / 'ipyidarc.py'
 
-        with open(idapythonrc_path, 'r') as rcfile:
-            existing_rcfile_version = self._get_bip_rcfile_version(rcfile.read())
-        
-        if existing_rcfile_version is None or install_rcfile_version > existing_rcfile_version:
-            with open(idapythonrc_path, 'a') as rcfile:
-                rcfile.write('\n')
-                rcfile.write(bip_idapythonrc_content)
-                rcfile.write('\n')
-            print('[+] Populated idapythonrc.py')
-        
+        self._update_rcfile(install_idapythonrc_path, idapythonrc_path)
+        self._update_rcfile(install_ipyidarc_path, ipyidarc_path)
 
     def run(self):
         install.run(self)

@@ -1,6 +1,3 @@
-_BIP_IDAPYTHON_RC_VERSION = '0.0.1'
-
-
 def reload_package(package: str, recurse: bool = True):
     """
     Reload a previous loaded package. This will execute top level code in the package.
